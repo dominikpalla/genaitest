@@ -172,6 +172,8 @@ tasks = [
 models = [
     {"name": "OpenAI GPT-4 Turbo", "function": get_openai_code, "model_param": "gpt-4-turbo",
     "input_cost_per_token": 0.01/1000, "output_cost_per_token": 0.03/1000},
+    {"name": "OpenAI GPT-4o", "function": get_openai_code, "model_param": "gpt-4o",
+    "input_cost_per_token": 0.005/1000, "output_cost_per_token": 0.015/1000},
     {"name": "OpenAI GPT-4o Mini", "function": get_openai_code, "model_param": "gpt-4o-mini",
     "input_cost_per_token": 0.00015/1000, "output_cost_per_token": 0.0006/1000},
     {"name": "OpenAI GPT-3.5 Turbo", "function": get_openai_code, "model_param": "gpt-3.5-turbo",

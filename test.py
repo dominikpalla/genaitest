@@ -13,6 +13,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 OPENAI_API_KEY = 'API_KEY'
 GOOGLE_GEMINI_API_KEY = 'API_KEY'
 HUGGINGFACE_API_KEY = 'API_KEY'
+CLAUDE_API_KEY = 'API_KEY'
 
 # Universal instruction to append to all prompts
 UNIVERSAL_INSTRUCTION = " Give me only the executable code, no comments, no explanations, no other information, just the code."
@@ -154,6 +155,53 @@ def get_llama_code(prompt, model="meta-llama/Meta-Llama-3-8B-Instruct", input_co
         return None, None, None
 
 
+# Function to calculate token count for Claude models
+def calculate_claude_tokens(text):
+    return len(text.split())  # Claude uses words, not subword tokens
+
+
+# Anthropic Claude API function with cost calculation
+def get_claude_code(prompt, model="claude-3.5-sonnet", input_cost_per_token=0.002, output_cost_per_token=0.002):
+    api_url = f"https://api.anthropic.com/v1/completions"
+    headers = {
+        'Authorization': f'Bearer {CLAUDE_API_KEY}',
+        'Content-Type': 'application/json'
+    }
+    data = {
+        'model': model,
+        'prompt': prompt,
+        'max_tokens_to_sample': 150,
+        'temperature': 0.7
+    }
+
+    logging.info(f"Sending request to Anthropic Claude model {model}...")
+
+    start_time = time.time()
+    response = requests.post(api_url, headers=headers, json=data)
+    end_time = time.time()
+
+    logging.info(f"Full API response from Anthropic Claude: {response.text}")
+
+    try:
+        response_data = response.json()
+        generated_code = response_data.get('completion', "")
+
+        # Calculate input and output tokens
+        input_tokens = calculate_claude_tokens(prompt)
+        output_tokens = calculate_claude_tokens(generated_code)
+
+        # Calculate the total cost based on input and output tokens
+        total_cost = (input_tokens * input_cost_per_token) + (output_tokens * output_cost_per_token)
+
+        logging.info(f"Response from Anthropic Claude (model: {model}) received in {end_time - start_time} seconds.")
+        logging.info(f"Total cost: ${total_cost}")
+        return generated_code, end_time - start_time, total_cost
+
+    except Exception as e:
+        logging.error(f"Error while using Anthropic Claude API: {str(e)}")
+        return None, None, None
+
+
 # Define tasks with prompts and universal instruction
 tasks = [
     "Write a simple program that prints the text 'Hello, World!' in Python." + UNIVERSAL_INSTRUCTION,
@@ -168,7 +216,7 @@ tasks = [
     "Write a basic web application using the Flask framework that has a simple form for entering text and displays the entered text back on the page upon form submission in Python." + UNIVERSAL_INSTRUCTION
 ]
 
-# List of models to test with cost per token
+# List of models with associated costs per token (in USD)
 models = [
     {"name": "OpenAI GPT-4 Turbo", "function": get_openai_code, "model_param": "gpt-4-turbo",
     "input_cost_per_token": 0.01/1000, "output_cost_per_token": 0.03/1000},
@@ -188,6 +236,14 @@ models = [
     "input_cost_per_token": 0.0028/1000, "output_cost_per_token": 0.0028/1000},
     {"name": "Meta LLaMA 3.1 8B", "function": get_llama_code, "model_param": "meta-llama/Meta-Llama-3.1-8B-Instruct",
     "input_cost_per_token": 0.0028/1000, "output_cost_per_token": 0.0028/1000},
+    {"name": "Claude 3.5 Sonnet", "function": get_claude_code, "model_param": "claude-3.5-sonnet",
+     "input_cost_per_token": 0.003 / 1000, "output_cost_per_token": 0.015 / 1000},
+    {"name": "Claude 3 Opus", "function": get_claude_code, "model_param": "claude-3-opus",
+     "input_cost_per_token": 0.015 / 1000, "output_cost_per_token": 0.075 / 1000},
+    {"name": "Claude 3 Sonnet", "function": get_claude_code, "model_param": "claude-3-sonnet",
+     "input_cost_per_token": 0.003 / 1000, "output_cost_per_token": 0.015 / 1000},
+    {"name": "Claude 3 Haiku", "function": get_claude_code, "model_param": "claude-3-haiku",
+     "input_cost_per_token": 0.00025 / 1000, "output_cost_per_token": 0.00125 / 1000},
 ]
 
 # Initialize list to store results
